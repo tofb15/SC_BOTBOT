@@ -54,7 +54,7 @@ void Base::addUnit(BWAPI::Unit& u, bool justBuilt) {
 
 	if (u->getType().isWorker()) {
 		workers.insert(u);
-		u->gather(Broodwar->getClosestUnit(u->getPosition(), BWAPI::Filter::IsMineralField, 5000));
+		u->gather(m_ai->getClosestMineral(u));
 	} else if (u->getType().isBuilding()) {
 		buildings.insert(u);
 		if (u->isBeingConstructed()) {
@@ -68,6 +68,22 @@ void Base::addUnit(BWAPI::Unit& u, bool justBuilt) {
 	//if (justBuilt) {
 	//	m_waiting[u->getType()]--;
 	//}
+}
+
+void Base::requestBuild(BWAPI::UnitType u) {
+	if (m_waiting[u] < 1 && m_currStage.m_subStage[m_currStage.curSubStage].m_demand[u] - m_current[u] < 1) {
+		bool constructing = false;
+		for (auto e : buildings) {
+			if (e->getType() == u && e->isBeingConstructed()) {
+				constructing = true;
+				break;
+			}
+		}
+
+		if (!constructing) {
+			m_currStage.m_subStage[m_currStage.curSubStage].m_demand[u]++;
+		}
+	}
 }
 
 void Base::removeUnit(BWAPI::Unit& u) {
@@ -104,7 +120,13 @@ bool Base::buildBuilding(BWAPI::UnitType u) {
 	if (!m_ai->canAfford(u))
 		return false;
 
-	TilePosition buildpos = Broodwar->getBuildLocation(u, TilePosition(buildings.getPosition()));
+	int i = 0;
+	TilePosition buildpos = TilePositions::Invalid;
+	while (buildpos == TilePositions::Invalid && i < 5) {
+		buildpos = Broodwar->getBuildLocation(u, TilePosition(buildings.getPosition()), 64 + i * 20);
+		i++;
+	}
+
 	if (buildpos != TilePositions::Invalid) {
 
 		BWAPI::Unit worker = getWorker();
@@ -130,8 +152,6 @@ bool Base::buildAddon(BWAPI::UnitType u) {
 	if (!m_ai->canAfford(u))
 		return false;
 
-	Broodwar->printf("Trying Addon");
-
 	for (auto e : buildings) {
 		if (e->canBuildAddon(u)) {
 			Broodwar->printf("Reserving for: %ss", u.getName().c_str());
@@ -148,6 +168,10 @@ bool Base::buildAddon(BWAPI::UnitType u) {
 	}
 
 	return false;
+}
+
+BWAPI::Unit Base::getClosestMineral() {
+	return Broodwar->getClosestUnit(buildings.getPosition(), BWAPI::Filter::IsMineralField);
 }
 
 bool Base::trainUnit(BWAPI::UnitType u) {
@@ -188,9 +212,9 @@ void Base::controll() {
 	if (Broodwar->getRegionAt(cp->getSides().first)->isHigherGround()) {
 		p = cp->getSides().first;
 	} else {
-		cp->getSides().second;
+		p = cp->getSides().second;
 	}
-	army.attack(BWTA::getNearestChokepoint(buildings.getPosition())->getCenter(), false);
+	army.attack(p, false);
 
 	if (stage == 0) {
 		if (m_startOrder.empty()) {
@@ -205,8 +229,12 @@ void Base::controll() {
 					if (!a.m_unitType.isBuilding()) {
 						b = trainUnit(a.m_unitType);
 					} else if (!a.m_unitType.isAddon()) {
+						if (a.m_unitType == UnitTypes::Terran_Machine_Shop) {
+							Broodwar->printf("Terran_Machine_Shop");
+						}
 						b = buildBuilding(a.m_unitType);
 					} else {
+						Broodwar->printf("Addon Found");
 						b = buildAddon(a.m_unitType);
 					}
 				}
@@ -223,8 +251,6 @@ void Base::controll() {
 		for (std::pair<BWAPI::UnitType, int> e : m_currStage.m_subStage[m_currStage.curSubStage].m_demand) {
 			if (e.second > m_current[e.first] + m_waiting[e.first]) {
 				if (e.first == UnitTypes::Resource_Vespene_Geyser) {
-					Broodwar->printf("Gas");
-
 					for (auto b : buildings) {
 						if (b->getType().isRefinery() && b->isCompleted()) {
 							Broodwar->printf("Ref");
@@ -234,10 +260,17 @@ void Base::controll() {
 						}
 					}
 
+				} else if (e.first == UnitTypes::Buildings) {
+					expand();
 				} else if (!e.first.isBuilding()) {
+					//if (e.first == UnitTypes::Terran_Machine_Shop) {
+					//	Broodwar->printf("Terran_Machine_Shop");
+					//}
 					trainUnit(e.first);
 				} else if (!e.first.isAddon()) {
 					buildBuilding(e.first);
+				} else {
+					buildAddon(e.first);
 				}
 			} else {
 				//Broodwar->sendText("Im Fine");
@@ -248,7 +281,7 @@ void Base::controll() {
 	int gasWorkers = 0;
 	for (auto u : workers) {
 		if (u->isIdle()) {
-			u->gather(m_ai->getClosestMineral(u));
+			u->gather(getClosestMineral());
 		} else if (u->isGatheringGas()) {
 			gasWorkers++;
 		}
@@ -257,12 +290,12 @@ void Base::controll() {
 }
 
 void Base::informAttack(Base* base, BWAPI::Unit u) {
-	if (base == this) {
-		m_baseStatus = Attacked;
-		army.attack(u->getPosition());
-	} else if (m_baseStatus != Attacked) {
-		army.attack(u->getPosition());
-	}
+	//if (base == this) {
+	//	m_baseStatus = Attacked;
+	//	army.attack(u->getPosition());
+	//} else if (m_baseStatus != Attacked) {
+	//	army.attack(u->getPosition());
+	//}
 }
 
 void Base::enemyDetected(BWAPI::Unit u) {
@@ -273,4 +306,8 @@ void Base::enemyDetected(BWAPI::Unit u) {
 	} else {
 		m_closestEnemy = u;
 	}
+}
+
+void Base::expand() {
+
 }

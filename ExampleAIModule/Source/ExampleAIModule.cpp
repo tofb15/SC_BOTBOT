@@ -117,8 +117,16 @@ BWAPI::Unit AI::getClosestMineral(BWAPI::Unit u) {
 void AI::onFrame() {
 
 	BWAPI::Error e = Broodwar->getLastError();
-	//if (e != BWAPI::Errors::Insufficient_Supply)
-	//	Broodwar->printf("%ss", e.getName().c_str());
+	if (e == BWAPI::Errors::Insufficient_Supply) {
+		if (Broodwar->self()->getRace() == Races::Terran) {
+			mainBase->requestBuild(UnitTypes::Terran_Supply_Depot);
+		} else if (Broodwar->self()->getRace() == Races::Protoss) {
+			mainBase->requestBuild(UnitTypes::Protoss_Pylon);
+		} else {
+			mainBase->requestBuild(UnitTypes::Zerg_Overlord);
+		}
+	}
+
 
 	drawStats();
 	//Call every 100:th frame
@@ -270,25 +278,25 @@ void AI::drawStats() {
 			}
 		}
 	} else {
-		Broodwar->drawTextScreen(5, 16 * line++, "Base");
-		std::map<UnitType, int> unitTypeCounts;
-		for (auto u : mainBase->buildings) {
-			if (unitTypeCounts.find(u->getType()) == unitTypeCounts.end()) {
-				unitTypeCounts.insert(std::make_pair(u->getType(), 0));
-			}
-			unitTypeCounts.find(u->getType())->second++;
-		}
+		//Broodwar->drawTextScreen(5, 16 * line++, "Base");
+		//std::map<UnitType, int> unitTypeCounts;
+		//for (auto u : mainBase->buildings) {
+		//	if (unitTypeCounts.find(u->getType()) == unitTypeCounts.end()) {
+		//		unitTypeCounts.insert(std::make_pair(u->getType(), 0));
+		//	}
+		//	unitTypeCounts.find(u->getType())->second++;
+		//}
 
-		for (auto u : mainBase->army) {
-			if (unitTypeCounts.find(u->getType()) == unitTypeCounts.end()) {
-				unitTypeCounts.insert(std::make_pair(u->getType(), 0));
-			}
-			unitTypeCounts.find(u->getType())->second++;
-		}
+		//for (auto u : mainBase->army) {
+		//	if (unitTypeCounts.find(u->getType()) == unitTypeCounts.end()) {
+		//		unitTypeCounts.insert(std::make_pair(u->getType(), 0));
+		//	}
+		//	unitTypeCounts.find(u->getType())->second++;
+		//}
 
-		for (std::map<UnitType, int>::iterator i = unitTypeCounts.begin(); i != unitTypeCounts.end(); i++) {
-			Broodwar->drawTextScreen(5, 16 * line++, "- %d %ss", i->second, i->first.getName().c_str());
-		}
+		//for (std::map<UnitType, int>::iterator i = unitTypeCounts.begin(); i != unitTypeCounts.end(); i++) {
+		//	Broodwar->drawTextScreen(5, 16 * line++, "- %d %ss", i->second, i->first.getName().c_str());
+		//}
 
 		Broodwar->drawTextScreen(5, 16 * line++, "Demand");
 

@@ -48,14 +48,17 @@ struct Base {
 	Base();
 	void init(AI* ai);
 	void addUnit(BWAPI::Unit& u, bool justBuilt = true);
+	void requestBuild(BWAPI::UnitType u);
+
 	void removeUnit(BWAPI::Unit& u);
 	BWAPI::Unit getWorker();
 	bool buildBuilding(BWAPI::UnitType u);
 	bool buildAddon(BWAPI::UnitType u);
+	BWAPI::Unit getClosestMineral();
 
 	bool trainUnit(BWAPI::UnitType u); 
 	void controll();
 	void informAttack(Base* base, BWAPI::Unit u);
 	void enemyDetected(BWAPI::Unit u);
-
+	void expand();
 };

@@ -37,6 +37,7 @@ void StageHolder::InitStages() {
 	sub.m_demand[UnitTypes::Terran_Siege_Tank_Tank_Mode] = 2;
 	sub.m_demand[UnitTypes::Terran_Factory] = 1;
 	sub.m_demand[UnitTypes::Terran_Machine_Shop] = 1;
+	sub.m_demand[UnitTypes::Buildings] = 1;
 	stage.m_subStage.push_back(sub);
 	//4
 	sub.m_demand[UnitTypes::Terran_SCV] = 29;
@@ -60,12 +61,17 @@ Stage StageHolder::getStage() {
 
 void Stage::update(std::unordered_map<int, int>& m_current) {
 
+	int left = 0;
+
 	for (size_t i = curSubStage; i < m_subStage.size(); i++) {
+		left = 0;
 		for (std::pair<int, int> e : m_subStage[i].m_demand) {
 			if (e.second > m_current[e.first]) {
-				//Broodwar->printf("Stage %d waiting for %ss. (%d, %d)", i, BWAPI::UnitType(e.first).getName().c_str(), e.second, m_current[e.first]);
-				curSubStage = i;
-				return;
+				left++;
+				if (left >= 3) {
+					curSubStage = i;
+					return;
+				}
 			}
 		}
 	}
